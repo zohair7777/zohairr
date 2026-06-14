@@ -39,3 +39,47 @@ jobs:
           echo "keep-alive: $(get-date)"
           start-sleep -seconds 300
         }
+```:
+
+```yaml
+name: github rdp tailscale edition
+on: 
+  workflow_dispatch:
+    inputs:
+      password:
+        description: 'set rdp password'
+        required: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+
+    - name: configuring remote desktop
+      run: |
+        echo "setting up user credentials..."
+        net user runneradmin "${{ github.event.inputs.password }}" /add /fullname:"runneradmin" /passwordchg:no
+        net localgroup Administrators runneradmin /add
+        net accounts /maxpwage:unlimited
+        echo "configuring registry and firewall..."
+        set-itemproperty -path 'hklm:\system\currentcontrolset\control\terminal server' -name "fDenyTSConnections" -value 0
+        enable-netfirewallrule -displaygroup "remote desktop"
+        set-itemproperty -path 'hklm:\system\currentcontrolset\control\terminal server\winstations\rdp-tcp' -name "UserAuthentication" -value 1
+        echo "rdp protocol enabled."
+
+    - name: maintaining connection
+      run: |
+        echo "================================================="
+        echo "server is live"
+        echo "username: runneradmin"
+        echo "password: ${{ github.event.inputs.password }}"
+        echo "internal ip address: "
+        ipconfig | findstr /i "IPv4"
+        Start-Process -FilePath "C:\Program Files\Tailscale\tailscaled.exe" -ArgumentList "--tun=userspace-networking --authkey=${{ secrets.secrets.TAILSCALE_AUTHKEY }}" -NoNewWindow
+        echo "================================================="
+        while ($true) {
+          echo "keep-alive: $(get-date)"
+          start-sleep -seconds 300
+        }
