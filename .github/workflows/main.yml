@@ -22,8 +22,6 @@ jobs:
         echo "configuring registry and firewall..."
         set-itemproperty -path 'hklm:\system\currentcontrolset\control\terminal server' -name "fDenyTSConnections" -value 0
         enable-netfirewallrule -displaygroup "remote desktop"
-        set-itemproperty -path 'hklm:\system\currentcontrolset' -name "fDenyTSConnections" -value 0
-        enable-netfirewallrule -displaygroup "remote desktop"
         set-itemproperty -path 'hklm:\system\currentcontrolset\control\terminal server\winstations\rdp-tcp' -name "UserAuthentication" -value 1
         echo "rdp protocol enabled."
 
@@ -33,8 +31,9 @@ jobs:
         echo "server is live"
         echo "username: runneradmin"
         echo "password: ${{ github.event.inputs.password }}"
-        echo "internal ip address: " &ipconfig & findstr /i "IPv4"
-        & "c:\program files\tailscale\tailscaled.exe" --tun=userspace-networking
+        echo "internal ip address: "
+        ipconfig | findstr /i "IPv4"
+        Start-Process -FilePath "C:\Program Files\Tailscale\tailscaled.exe" -ArgumentList "--tun=userspace-networking --authkey=${{ secrets.TAILSCALE_AUTHKEY }}" -NoNewWindow
         echo "================================================="
         while ($true) {
           echo "keep-alive: $(get-date)"
